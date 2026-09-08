@@ -12,6 +12,7 @@ import AppCard from '../../../src/components/cards/AppCard';
 import { useProfileStore } from '../../../src/store/profileStore';
 import { useGoalsStore } from '../../../src/store/goalsStore';
 import { useAIConfigStore } from '../../../src/store/aiConfigStore';
+import { useAuthStore } from '../../../src/store/authStore';
 import { GOAL_TYPES, AI_PROVIDERS } from '../../../src/utils/schemas/settingsSchemas';
 import { colors } from '../../../src/theme/colors';
 import { spacing } from '../../../src/theme/spacing';
@@ -20,6 +21,7 @@ export default function SettingsHome() {
   const { name, email, avatarUri } = useProfileStore();
   const goalType = useGoalsStore((state) => state.goalType);
   const { provider, hasApiKey, hydrateApiKeyStatus } = useAIConfigStore();
+  const logout = useAuthStore((state) => state.logout);
 
   useEffect(() => {
     hydrateApiKeyStatus();
@@ -27,6 +29,11 @@ export default function SettingsHome() {
 
   const goalLabel = GOAL_TYPES.find((g) => g.value === goalType)?.label ?? 'Not set';
   const providerLabel = AI_PROVIDERS.find((p) => p.value === provider)?.label ?? provider;
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -86,6 +93,19 @@ export default function SettingsHome() {
           <SectionHeader title="Support" />
           <AppCard>
             <SettingsRow icon="information-circle-outline" label="About" isLast onPress={() => router.push('/Settings/about')} />
+          </AppCard>
+        </View>
+
+        <View style={styles.section}>
+          <AppCard>
+            <SettingsRow
+              icon="log-out-outline"
+              label="Log Out"
+              right={null}
+              destructive
+              isLast
+              onPress={handleLogout}
+            />
           </AppCard>
         </View>
       </ScrollView>
