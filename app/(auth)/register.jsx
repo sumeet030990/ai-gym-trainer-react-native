@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useFormik } from 'formik';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../src/components/common/ScreenHeader';
 import AppInput from '../../src/components/common/AppInput';
@@ -11,6 +10,7 @@ import AppText from '../../src/components/common/AppText';
 import PrimaryButton from '../../src/components/common/PrimaryButton';
 import { useRegisterMutation } from '../../src/hooks/useAuth';
 import { registerSchema } from '../../src/utils/schemas/authSchemas';
+import { validateWithZod } from '../../src/utils/validateWithZod';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/spacing';
 import { radius } from '../../src/theme/radius';
@@ -20,24 +20,21 @@ export default function RegisterScreen() {
   const [serverError, setServerError] = useState(null);
   const [registered, setRegistered] = useState(false);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { firstName: '', lastName: '', mobileNo: '', email: '', password: '', confirmPassword: '' },
+  const { values, errors, isSubmitting, setFieldValue, handleSubmit } = useFormik({
+    initialValues: { firstName: '', lastName: '', mobileNo: '', email: '', password: '', confirmPassword: '' },
+    validate: validateWithZod(registerSchema),
+    onSubmit: async (formValues, { setSubmitting }) => {
+      setServerError(null);
+      try {
+        await registerMutation.mutateAsync(formValues);
+        setRegistered(true);
+      } catch (error) {
+        setServerError(error.message);
+      } finally {
+        setSubmitting(false);
+      }
+    },
   });
-
-  const onSubmit = async (values) => {
-    setServerError(null);
-    try {
-      await registerMutation.mutateAsync(values);
-      setRegistered(true);
-    } catch (error) {
-      setServerError(error.message);
-    }
-  };
 
   if (registered) {
     return (
@@ -77,86 +74,54 @@ export default function RegisterScreen() {
         ) : null}
 
         <View style={styles.row}>
-          <Field label="First Name" error={errors.firstName?.message} style={styles.half}>
-            <Controller
-              control={control}
-              name="firstName"
-              render={({ field }) => <AppInput placeholder="Jane" value={field.value} onChangeText={field.onChange} />}
-            />
+          <Field label="First Name" error={errors.firstName} style={styles.half}>
+            <AppInput placeholder="Jane" value={values.firstName} onChangeText={(text) => setFieldValue('firstName', text)} />
           </Field>
-          <Field label="Last Name" error={errors.lastName?.message} style={styles.half}>
-            <Controller
-              control={control}
-              name="lastName"
-              render={({ field }) => <AppInput placeholder="Doe" value={field.value} onChangeText={field.onChange} />}
-            />
+          <Field label="Last Name" error={errors.lastName} style={styles.half}>
+            <AppInput placeholder="Doe" value={values.lastName} onChangeText={(text) => setFieldValue('lastName', text)} />
           </Field>
         </View>
 
-        <Field label="Mobile Number" error={errors.mobileNo?.message}>
-          <Controller
-            control={control}
-            name="mobileNo"
-            render={({ field }) => (
-              <AppInput
-                placeholder="+14155552671"
-                keyboardType="phone-pad"
-                value={field.value}
-                onChangeText={field.onChange}
-              />
-            )}
+        <Field label="Mobile Number" error={errors.mobileNo}>
+          <AppInput
+            placeholder="+14155552671"
+            keyboardType="phone-pad"
+            value={values.mobileNo}
+            onChangeText={(text) => setFieldValue('mobileNo', text)}
           />
         </Field>
 
-        <Field label="Email (optional)" error={errors.email?.message}>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field }) => (
-              <AppInput
-                placeholder="jane@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={field.value}
-                onChangeText={field.onChange}
-              />
-            )}
+        <Field label="Email (optional)" error={errors.email}>
+          <AppInput
+            placeholder="jane@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={values.email}
+            onChangeText={(text) => setFieldValue('email', text)}
           />
         </Field>
 
-        <Field label="Password" error={errors.password?.message}>
-          <Controller
-            control={control}
-            name="password"
-            render={({ field }) => (
-              <AppInput
-                placeholder="At least 8 characters"
-                secureTextEntry
-                autoCapitalize="none"
-                value={field.value}
-                onChangeText={field.onChange}
-              />
-            )}
+        <Field label="Password" error={errors.password}>
+          <AppInput
+            placeholder="At least 8 characters"
+            secureTextEntry
+            autoCapitalize="none"
+            value={values.password}
+            onChangeText={(text) => setFieldValue('password', text)}
           />
         </Field>
 
-        <Field label="Confirm Password" error={errors.confirmPassword?.message}>
-          <Controller
-            control={control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <AppInput
-                placeholder="Re-enter your password"
-                secureTextEntry
-                autoCapitalize="none"
-                value={field.value}
-                onChangeText={field.onChange}
-              />
-            )}
+        <Field label="Confirm Password" error={errors.confirmPassword}>
+          <AppInput
+            placeholder="Re-enter your password"
+            secureTextEntry
+            autoCapitalize="none"
+            value={values.confirmPassword}
+            onChangeText={(text) => setFieldValue('confirmPassword', text)}
           />
         </Field>
 
-        <PrimaryButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting} style={styles.submit}>
+        <PrimaryButton onPress={handleSubmit} disabled={isSubmitting} style={styles.submit}>
           {isSubmitting ? 'Creating account…' : 'Create Account'}
         </PrimaryButton>
       </ScrollView>

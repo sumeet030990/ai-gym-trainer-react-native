@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useFormik } from 'formik';
 import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenHeader from '../../../src/components/common/ScreenHeader';
@@ -12,6 +11,7 @@ import AppText from '../../../src/components/common/AppText';
 import PrimaryButton from '../../../src/components/common/PrimaryButton';
 import { useAIConfigStore } from '../../../src/store/aiConfigStore';
 import { aiSettingsSchema, AI_PROVIDERS } from '../../../src/utils/schemas/settingsSchemas';
+import { validateWithZod } from '../../../src/utils/validateWithZod';
 import { getSecureValue, SECURE_KEYS } from '../../../src/services/storage/secureStorage';
 import { testGroqConnection } from '../../../src/services/api/ai.api';
 import { colors } from '../../../src/theme/colors';
@@ -24,35 +24,35 @@ export default function AISettings() {
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
 
-  const { control, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(aiSettingsSchema),
-    defaultValues: {
+  const { values, errors, isSubmitting, setFieldValue, handleSubmit } = useFormik({
+    initialValues: {
       provider: config.provider,
       model: config.model,
       apiKey: '',
       temperature: String(config.temperature),
       maxTokens: String(config.maxTokens),
     },
+    validate: validateWithZod(aiSettingsSchema),
+    onSubmit: async ({ apiKey, ...rest }, { setSubmitting }) => {
+      config.updateConfig(rest);
+      await config.saveApiKey(apiKey);
+      setSubmitting(false);
+      router.back();
+    },
   });
 
   useEffect(() => {
     getSecureValue(SECURE_KEYS.groqApiKey).then((existingKey) => {
-      if (existingKey) setValue('apiKey', existingKey);
+      if (existingKey) setFieldValue('apiKey', existingKey);
     });
-  }, [setValue]);
+  }, [setFieldValue]);
 
   const handleTestConnection = async () => {
     setTesting(true);
     setTestResult(null);
-    const result = await testGroqConnection(watch('apiKey'));
+    const result = await testGroqConnection(values.apiKey);
     setTestResult(result);
     setTesting(false);
-  };
-
-  const onSubmit = async ({ apiKey, ...rest }) => {
-    config.updateConfig(rest);
-    await config.saveApiKey(apiKey);
-    router.back();
   };
 
   return (
@@ -63,68 +63,50 @@ export default function AISettings() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Field label="Provider">
-          <Controller
-            control={control}
-            name="provider"
-            render={({ field }) => (
-              <View style={styles.grid}>
-                {AI_PROVIDERS.map((option) => {
-                  const selected = field.value === option.value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => field.onChange(option.value)}
-                      style={[styles.chip, selected && styles.chipSelected]}
-                    >
-                      <AppText variant="labelLarge" color={selected ? colors.onPrimary : colors.textPrimary}>
-                        {option.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
+          <View style={styles.grid}>
+            {AI_PROVIDERS.map((option) => {
+              const selected = values.provider === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setFieldValue('provider', option.value)}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <AppText variant="labelLarge" color={selected ? colors.onPrimary : colors.textPrimary}>
+                    {option.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Field>
+
+        <Field label="Model" error={errors.model}>
+          <AppInput
+            placeholder="llama-3.3-70b-versatile"
+            autoCapitalize="none"
+            value={values.model}
+            onChangeText={(text) => setFieldValue('model', text)}
           />
         </Field>
 
-        <Field label="Model" error={errors.model?.message}>
-          <Controller
-            control={control}
-            name="model"
-            render={({ field }) => (
-              <AppInput
-                placeholder="llama-3.3-70b-versatile"
-                autoCapitalize="none"
-                value={field.value}
-                onChangeText={field.onChange}
+        <Field label="API Key" error={errors.apiKey}>
+          <AppInput
+            placeholder="gsk_..."
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry={keyHidden}
+            value={values.apiKey}
+            onChangeText={(text) => {
+              setFieldValue('apiKey', text);
+              setTestResult(null);
+            }}
+            right={
+              <TextInput.Icon
+                icon={keyHidden ? 'eye-outline' : 'eye-off-outline'}
+                onPress={() => setKeyHidden((prev) => !prev)}
               />
-            )}
-          />
-        </Field>
-
-        <Field label="API Key" error={errors.apiKey?.message}>
-          <Controller
-            control={control}
-            name="apiKey"
-            render={({ field }) => (
-              <AppInput
-                placeholder="gsk_..."
-                autoCapitalize="none"
-                autoCorrect={false}
-                secureTextEntry={keyHidden}
-                value={field.value}
-                onChangeText={(text) => {
-                  field.onChange(text);
-                  setTestResult(null);
-                }}
-                right={
-                  <TextInput.Icon
-                    icon={keyHidden ? 'eye-outline' : 'eye-off-outline'}
-                    onPress={() => setKeyHidden((prev) => !prev)}
-                  />
-                }
-              />
-            )}
+            }
           />
           <AppText variant="bodySmall" color={colors.textSecondary} style={styles.hint}>
             Stored securely on this device. Never shared or logged.
@@ -152,27 +134,15 @@ export default function AISettings() {
         ) : null}
 
         <View style={styles.row}>
-          <Field label="Temperature" error={errors.temperature?.message} style={styles.half}>
-            <Controller
-              control={control}
-              name="temperature"
-              render={({ field }) => (
-                <AppInput placeholder="0.7" keyboardType="numeric" value={field.value} onChangeText={field.onChange} />
-              )}
-            />
+          <Field label="Temperature" error={errors.temperature} style={styles.half}>
+            <AppInput placeholder="0.7" keyboardType="numeric" value={values.temperature} onChangeText={(text) => setFieldValue('temperature', text)} />
           </Field>
-          <Field label="Max Tokens" error={errors.maxTokens?.message} style={styles.half}>
-            <Controller
-              control={control}
-              name="maxTokens"
-              render={({ field }) => (
-                <AppInput placeholder="1024" keyboardType="numeric" value={field.value} onChangeText={field.onChange} />
-              )}
-            />
+          <Field label="Max Tokens" error={errors.maxTokens} style={styles.half}>
+            <AppInput placeholder="1024" keyboardType="numeric" value={values.maxTokens} onChangeText={(text) => setFieldValue('maxTokens', text)} />
           </Field>
         </View>
 
-        <PrimaryButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting} style={styles.submit}>
+        <PrimaryButton onPress={handleSubmit} disabled={isSubmitting} style={styles.submit}>
           Save AI Settings
         </PrimaryButton>
       </ScrollView>

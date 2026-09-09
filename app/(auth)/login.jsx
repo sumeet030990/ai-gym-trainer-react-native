@@ -4,14 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useFormik } from 'formik';
 import { TextInput } from 'react-native-paper';
 import AppInput from '../../src/components/common/AppInput';
 import AppText from '../../src/components/common/AppText';
 import PrimaryButton from '../../src/components/common/PrimaryButton';
 import { useLoginMutation } from '../../src/hooks/useAuth';
 import { loginSchema } from '../../src/utils/schemas/authSchemas';
+import { validateWithZod } from '../../src/utils/validateWithZod';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/spacing';
 import { radius } from '../../src/theme/radius';
@@ -22,24 +22,22 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState(null);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+  console.log('process.env.USER_NAME: ', process.env.USER_NAME);
+  const { values, errors, isSubmitting, setFieldValue, handleSubmit } = useFormik({
+    initialValues: { email: process.env.USER_NAME || '', password: process.env.PASSWORD || '' },
+    validate: validateWithZod(loginSchema),
+    onSubmit: async ({ email, password }, { setSubmitting }) => {
+      setServerError(null);
+      try {
+        await loginMutation.mutateAsync({ email, password });
+        router.replace('/');
+      } catch (error) {
+        setServerError(error.message);
+      } finally {
+        setSubmitting(false);
+      }
+    },
   });
-
-  const onSubmit = async ({ email, password }) => {
-    setServerError(null);
-    try {
-      await loginMutation.mutateAsync({ email, password });
-      router.replace('/');
-    } catch (error) {
-      setServerError(error.message);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -48,10 +46,7 @@ export default function LoginScreen() {
       <Ionicons name="barbell-outline" size={220} color="rgba(255,255,255,0.08)" style={styles.bgIconTop} />
       <Ionicons name="flame-outline" size={160} color="rgba(255,255,255,0.08)" style={styles.bgIconBottom} />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
           <View style={styles.hero}>
             <View style={styles.logoBadge}>
@@ -87,59 +82,43 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            <Field label="Email" error={errors.email?.message}>
-              <Controller
-                control={control}
-                name="email"
-                render={({ field }) => (
-                  <AppInput
-                    placeholder="jane@example.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    left={<TextInput.Icon icon="email-outline" />}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                  />
-                )}
+            <Field label="Email" error={errors.email}>
+              <AppInput
+                placeholder="jane@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                left={<TextInput.Icon icon="email-outline" />}
+                value={values.email}
+                onChangeText={(text) => setFieldValue('email', text)}
               />
             </Field>
 
-            <Field label="Password" error={errors.password?.message}>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <AppInput
-                    placeholder="Enter your password"
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoComplete="password"
-                    left={<TextInput.Icon icon="lock-outline" />}
-                    right={
-                      <TextInput.Icon
-                        icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        onPress={() => setShowPassword((prev) => !prev)}
-                      />
-                    }
-                    value={field.value}
-                    onChangeText={field.onChange}
+            <Field label="Password" error={errors.password}>
+              <AppInput
+                placeholder="Enter your password"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                left={<TextInput.Icon icon="lock-outline" />}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    onPress={() => setShowPassword((prev) => !prev)}
                   />
-                )}
+                }
+                value={values.password}
+                onChangeText={(text) => setFieldValue('password', text)}
               />
             </Field>
 
-            <Pressable
-              onPress={() => router.push('/forgot-password')}
-              hitSlop={8}
-              style={styles.forgotLink}
-            >
+            <Pressable onPress={() => router.push('/forgot-password')} hitSlop={8} style={styles.forgotLink}>
               <AppText variant="labelLarge" color={colors.primary}>
                 Forgot password?
               </AppText>
             </Pressable>
 
-            <PrimaryButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting} style={styles.submit}>
+            <PrimaryButton onPress={handleSubmit} disabled={isSubmitting} style={styles.submit}>
               {isSubmitting ? 'Logging in…' : 'Log In'}
             </PrimaryButton>
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// react-hook-form always feeds text inputs as '' rather than undefined, and
+// Text inputs always feed values in as '' rather than undefined, and
 // z.coerce.number() turns '' into 0 — which then fails .min() before .optional()
 // ever gets a chance to skip it. Blank out empty strings first so optional fields
 // can actually be left empty.

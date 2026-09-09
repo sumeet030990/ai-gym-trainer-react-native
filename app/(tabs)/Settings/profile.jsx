@@ -1,8 +1,7 @@
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useFormik } from 'formik';
 import { SegmentedButtons } from 'react-native-paper';
 import ScreenHeader from '../../../src/components/common/ScreenHeader';
 import AppInput from '../../../src/components/common/AppInput';
@@ -11,15 +10,15 @@ import PrimaryButton from '../../../src/components/common/PrimaryButton';
 import Avatar from '../../../src/components/common/Avatar';
 import { useProfileStore } from '../../../src/store/profileStore';
 import { profileSchema } from '../../../src/utils/schemas/settingsSchemas';
+import { validateWithZod } from '../../../src/utils/validateWithZod';
 import { colors } from '../../../src/theme/colors';
 import { spacing } from '../../../src/theme/spacing';
 
 export default function ProfileSettings() {
   const profile = useProfileStore();
 
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
+  const { values, errors, isSubmitting, setFieldValue, handleSubmit } = useFormik({
+    initialValues: {
       name: profile.name,
       email: profile.email,
       phone: profile.phone,
@@ -27,12 +26,13 @@ export default function ProfileSettings() {
       weightKg: profile.weightKg ? String(profile.weightKg) : '',
       fitnessLevel: profile.fitnessLevel,
     },
+    validate: validateWithZod(profileSchema),
+    onSubmit: (formValues, { setSubmitting }) => {
+      profile.updateProfile(formValues);
+      setSubmitting(false);
+      router.back();
+    },
   });
-
-  const onSubmit = (values) => {
-    profile.updateProfile(values);
-    router.back();
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -45,87 +45,51 @@ export default function ProfileSettings() {
           <Avatar uri={profile.avatarUri} name={profile.name} size={88} />
         </View>
 
-        <Field label="Full Name" error={errors.name?.message}>
-          <Controller
-            control={control}
-            name="name"
-            render={({ field }) => (
-              <AppInput placeholder="Jane Doe" value={field.value} onChangeText={field.onChange} />
-            )}
+        <Field label="Full Name" error={errors.name}>
+          <AppInput placeholder="Jane Doe" value={values.name} onChangeText={(text) => setFieldValue('name', text)} />
+        </Field>
+
+        <Field label="Email" error={errors.email}>
+          <AppInput
+            placeholder="jane@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={values.email}
+            onChangeText={(text) => setFieldValue('email', text)}
           />
         </Field>
 
-        <Field label="Email" error={errors.email?.message}>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field }) => (
-              <AppInput
-                placeholder="jane@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={field.value}
-                onChangeText={field.onChange}
-              />
-            )}
-          />
-        </Field>
-
-        <Field label="Mobile Number" error={errors.phone?.message}>
-          <Controller
-            control={control}
-            name="phone"
-            render={({ field }) => (
-              <AppInput
-                placeholder="+1 555 123 4567"
-                keyboardType="phone-pad"
-                value={field.value}
-                onChangeText={field.onChange}
-              />
-            )}
+        <Field label="Mobile Number" error={errors.phone}>
+          <AppInput
+            placeholder="+1 555 123 4567"
+            keyboardType="phone-pad"
+            value={values.phone}
+            onChangeText={(text) => setFieldValue('phone', text)}
           />
         </Field>
 
         <View style={styles.row}>
-          <Field label="Height (cm)" error={errors.heightCm?.message} style={styles.half}>
-            <Controller
-              control={control}
-              name="heightCm"
-              render={({ field }) => (
-                <AppInput placeholder="175" keyboardType="numeric" value={field.value} onChangeText={field.onChange} />
-              )}
-            />
+          <Field label="Height (cm)" error={errors.heightCm} style={styles.half}>
+            <AppInput placeholder="175" keyboardType="numeric" value={values.heightCm} onChangeText={(text) => setFieldValue('heightCm', text)} />
           </Field>
-          <Field label="Weight (kg)" error={errors.weightKg?.message} style={styles.half}>
-            <Controller
-              control={control}
-              name="weightKg"
-              render={({ field }) => (
-                <AppInput placeholder="72" keyboardType="numeric" value={field.value} onChangeText={field.onChange} />
-              )}
-            />
+          <Field label="Weight (kg)" error={errors.weightKg} style={styles.half}>
+            <AppInput placeholder="72" keyboardType="numeric" value={values.weightKg} onChangeText={(text) => setFieldValue('weightKg', text)} />
           </Field>
         </View>
 
         <Field label="Fitness Level">
-          <Controller
-            control={control}
-            name="fitnessLevel"
-            render={({ field }) => (
-              <SegmentedButtons
-                value={field.value}
-                onValueChange={field.onChange}
-                buttons={[
-                  { value: 'beginner', label: 'Beginner' },
-                  { value: 'intermediate', label: 'Intermediate' },
-                  { value: 'advanced', label: 'Advanced' },
-                ]}
-              />
-            )}
+          <SegmentedButtons
+            value={values.fitnessLevel}
+            onValueChange={(value) => setFieldValue('fitnessLevel', value)}
+            buttons={[
+              { value: 'beginner', label: 'Beginner' },
+              { value: 'intermediate', label: 'Intermediate' },
+              { value: 'advanced', label: 'Advanced' },
+            ]}
           />
         </Field>
 
-        <PrimaryButton onPress={handleSubmit(onSubmit)} disabled={isSubmitting} style={styles.submit}>
+        <PrimaryButton onPress={handleSubmit} disabled={isSubmitting} style={styles.submit}>
           Save Changes
         </PrimaryButton>
       </ScrollView>
