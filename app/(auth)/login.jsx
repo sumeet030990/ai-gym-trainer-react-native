@@ -50,10 +50,10 @@ export default function LoginScreen() {
           <View style={styles.hero}>
             <Image source={require('../../assets/pocket_logo.png')} style={styles.logoImage} resizeMode="contain" />
             <AppText variant="headlineMedium" color={colors.white} style={styles.brand}>
-              {process.env.EXPO_APP_NAME || 'Pocket Coach'}
+              {process.env.EXPO_PUBLIC_APP_NAME}
             </AppText>
             <AppText variant="bodyMedium" color="rgba(255,255,255,0.8)">
-              Train smarter, every single day.
+              Your personal AI fitness coach.
             </AppText>
           </View>
 
