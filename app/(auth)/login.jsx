@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,9 +22,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState(null);
 
-  console.log('process.env.USER_NAME: ', process.env.USER_NAME);
   const { values, errors, isSubmitting, setFieldValue, handleSubmit } = useFormik({
-    initialValues: { email: process.env.USER_NAME || '', password: process.env.PASSWORD || '' },
+    initialValues: { email: process.env.EXPO_PUBLIC_USER_NAME || '', password: process.env.EXPO_PUBLIC_PASSWORD || '' },
     validate: validateWithZod(loginSchema),
     onSubmit: async ({ email, password }, { setSubmitting }) => {
       setServerError(null);
@@ -49,11 +48,9 @@ export default function LoginScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
           <View style={styles.hero}>
-            <View style={styles.logoBadge}>
-              <Ionicons name="barbell" size={32} color={colors.white} />
-            </View>
+            <Image source={require('../../assets/pocket_logo.png')} style={styles.logoImage} resizeMode="contain" />
             <AppText variant="headlineMedium" color={colors.white} style={styles.brand}>
-              AI Gym Trainer
+              {process.env.EXPO_APP_NAME || 'Pocket Coach'}
             </AppText>
             <AppText variant="bodyMedium" color="rgba(255,255,255,0.8)">
               Train smarter, every single day.
@@ -179,14 +176,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+  logoImage: {
+    width: 150,
+    height: 150,
   },
   brand: {
     marginBottom: spacing.xxs,

@@ -26,7 +26,7 @@ export default function AboutSettings() {
             <Ionicons name="barbell" size={28} color={colors.onPrimary} />
           </View>
           <AppText variant="titleLarge" style={styles.appName}>
-            AI Gym Trainer
+            {process.env.EXPO_APP_NAME}
           </AppText>
           <AppText variant="bodySmall" color={colors.textSecondary}>
             Version {version}
@@ -39,7 +39,7 @@ export default function AboutSettings() {
         </AppCard>
 
         <AppText variant="bodySmall" color={colors.textSecondary} style={styles.footer}>
-          AI Gym Trainer & Nutrition Coach helps you plan workouts, track nutrition, and stay consistent with AI-adapted
+          {process.env.EXPO_APP_NAME} helps you plan workouts, track nutrition, and stay consistent with AI-adapted
           guidance.
         </AppText>
       </ScrollView>

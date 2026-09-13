@@ -1,6 +1,6 @@
-# AI Gym Trainer - React Native Project Context
+# PocketCoach - React Native Project Context
 
-You are helping build a production-ready React Native application called **AI Gym Trainer & Nutrition Coach**.
+You are helping build a production-ready React Native application called **PocketCoach**.
 
 Your role is to act as a Senior React Native Architect and UI Engineer.
 

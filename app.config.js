@@ -28,7 +28,7 @@ module.exports = {
     },
     plugins: ['expo-router', 'expo-status-bar'],
     extra: {
-      backendUrl: process.env.BACKEND_URL,
+      backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
     },
   },
 };

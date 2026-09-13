@@ -1,4 +1,4 @@
-# AI Gym Trainer & Nutrition Coach
+# Pocket Coach
 
 A production-quality React Native (Expo) app for workout tracking, nutrition logging, and AI-assisted coaching — built with Material Design 3.
 
