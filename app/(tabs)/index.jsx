@@ -20,6 +20,11 @@ import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/spacing';
 import { radius } from '../../src/theme/radius';
 
+const QUICK_LINKS = [
+  { key: 'library', label: 'Exercise Library', icon: 'library-outline', color: colors.primary, background: colors.primaryContainer, href: '/Workout/library' },
+  { key: 'history', label: 'History', icon: 'time-outline', color: colors.secondary, background: colors.secondaryContainer, href: '/Workout/history' },
+];
+
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good Morning';
@@ -214,6 +219,24 @@ export default function Home() {
             )}
           </Animated.View>
         )}
+
+        <Animated.View entering={FadeInDown.duration(400).delay(240)}>
+          <SectionHeader title="Quick Access" />
+          <View style={styles.quickLinks}>
+            {QUICK_LINKS.map((link) => (
+              <Pressable key={link.key} onPress={() => router.push(link.href)} style={styles.quickLinkWrap}>
+                <AppCard style={styles.quickLinkCard}>
+                  <View style={[styles.quickLinkIcon, { backgroundColor: link.background }]}>
+                    <Ionicons name={link.icon} size={20} color={link.color} />
+                  </View>
+                  <AppText variant="labelLarge" numberOfLines={2} style={styles.quickLinkLabel}>
+                    {link.label}
+                  </AppText>
+                </AppCard>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -338,5 +361,28 @@ const styles = StyleSheet.create({
   bannerAction: {
     marginTop: spacing.xs,
     alignSelf: 'flex-start',
+  },
+  quickLinks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  quickLinkWrap: {
+    flexGrow: 1,
+    flexBasis: '30%',
+  },
+  quickLinkCard: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  quickLinkIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickLinkLabel: {
+    textAlign: 'center',
   },
 });
