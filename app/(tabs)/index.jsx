@@ -213,7 +213,7 @@ export default function Home() {
                 calories={workout.calories}
                 duration={workout.duration}
                 aiReason={workout.aiReason}
-                onStart={() => router.push('/Workout')}
+                onStart={() => router.push('/Workout/summary')}
                 onRegenerate={() => regeneratePlan.mutate()}
               />
             )}
