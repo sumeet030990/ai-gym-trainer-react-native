@@ -8,3 +8,8 @@ export function getAttendance(userId, { startDate, endDate } = {}) {
   const query = params.toString();
   return authorizedFetch(`/attendance/${userId}${query ? `?${query}` : ''}`);
 }
+
+// Logs a gym check-in for the authenticated user (attendance_date defaults to now server-side).
+export function createAttendance() {
+  return authorizedFetch('/attendance/', { method: 'POST', body: {} });
+}

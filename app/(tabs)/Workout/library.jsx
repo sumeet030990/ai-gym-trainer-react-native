@@ -53,7 +53,13 @@ export default function ExerciseLibrary() {
         <SearchBar value={query} onChangeText={setQuery} placeholder="Search exercises" />
         <View style={styles.filterRow}>
           <Chip
-            icon={() => <Ionicons name="body-outline" size={14} color={muscleId ? colors.onPrimaryContainer : colors.textSecondary} />}
+            icon={() => (
+              <Ionicons
+                name="body-outline"
+                size={14}
+                color={muscleId ? colors.onPrimaryContainer : colors.textSecondary}
+              />
+            )}
             selected={Boolean(muscleId)}
             onPress={() => setMuscleSheetVisible(true)}
             style={[styles.chip, muscleId && styles.chipSelected]}
@@ -61,7 +67,13 @@ export default function ExerciseLibrary() {
             {selectedMuscleName ?? 'Muscle'}
           </Chip>
           <Chip
-            icon={() => <Ionicons name="barbell-outline" size={14} color={equipmentId ? colors.onPrimaryContainer : colors.textSecondary} />}
+            icon={() => (
+              <Ionicons
+                name="barbell-outline"
+                size={14}
+                color={equipmentId ? colors.onPrimaryContainer : colors.textSecondary}
+              />
+            )}
             selected={Boolean(equipmentId)}
             onPress={() => setEquipmentSheetVisible(true)}
             style={[styles.chip, equipmentId && styles.chipSelected]}
