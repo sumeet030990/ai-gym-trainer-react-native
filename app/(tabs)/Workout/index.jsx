@@ -7,6 +7,7 @@ import SectionHeader from '../../../src/components/common/SectionHeader';
 import Loader from '../../../src/components/common/Loader';
 import ErrorView from '../../../src/components/common/ErrorView';
 import WorkoutCard from '../../../src/components/cards/WorkoutCard';
+import RestDayCard from '../../../src/components/cards/RestDayCard';
 import AppCard from '../../../src/components/cards/AppCard';
 import AppText from '../../../src/components/common/AppText';
 import { useTodayWorkout } from '../../../src/hooks/useWorkout';
@@ -29,8 +30,10 @@ export default function WorkoutHome() {
 
         {isLoading ? (
           <Loader height={260} />
-        ) : isError ? (
+        ) : isError || !workout ? (
           <ErrorView message="Couldn't load today's workout." onRetry={refetch} />
+        ) : workout.isRestDay ? (
+          <RestDayCard />
         ) : (
           <WorkoutCard
             title={workout.title}

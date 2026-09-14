@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,15 +16,17 @@ export default function WorkoutCard({
   calories,
   duration,
   aiReason,
+  badgeLabel,
+  badgeIcon,
   onStart,
   onRegenerate,
 }) {
   return (
     <LinearGradient colors={['#4F46E5', '#6D5AF5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
       <View style={styles.badge}>
-        <Ionicons name={aiReason ? 'sparkles' : 'flash'} size={12} color={colors.white} />
+        <Ionicons name={badgeIcon ?? (aiReason ? 'sparkles' : 'flash')} size={12} color={colors.white} />
         <AppText variant="labelSmall" color={colors.white} style={styles.badgeText}>
-          {aiReason ? 'AI ADJUSTED' : "TODAY'S WORKOUT"}
+          {badgeLabel ?? (aiReason ? 'AI ADJUSTED' : "TODAY'S WORKOUT")}
         </AppText>
       </View>
 
@@ -46,22 +49,31 @@ export default function WorkoutCard({
       ) : null}
 
       <View style={styles.statsRow}>
-        <Stat icon="barbell-outline" value={exerciseCount} label="Exercises" />
-        <View style={styles.divider} />
-        <Stat icon="flame-outline" value={calories} label="Est. Calories" />
-        <View style={styles.divider} />
-        <Stat icon="time-outline" value={duration} label="Duration" />
+        {[
+          { icon: 'barbell-outline', value: exerciseCount, label: 'Exercises' },
+          { icon: 'flame-outline', value: calories, label: 'Est. Calories' },
+          { icon: 'time-outline', value: duration, label: 'Duration' },
+        ]
+          .filter((stat) => stat.value !== null && stat.value !== undefined)
+          .map((stat, index, stats) => (
+            <Fragment key={stat.label}>
+              <Stat icon={stat.icon} value={stat.value} label={stat.label} />
+              {index < stats.length - 1 ? <View style={styles.divider} /> : null}
+            </Fragment>
+          ))}
       </View>
 
-      <PrimaryButton
-        icon="play"
-        onPress={onStart}
-        buttonColor={colors.white}
-        textColor={colors.primary}
-        style={styles.cta}
-      >
-        Start Workout
-      </PrimaryButton>
+      {onStart ? (
+        <PrimaryButton
+          icon="play"
+          onPress={onStart}
+          buttonColor={colors.white}
+          textColor={colors.primary}
+          style={styles.cta}
+        >
+          Start Workout
+        </PrimaryButton>
+      ) : null}
 
       {aiReason && onRegenerate ? (
         <Pressable onPress={onRegenerate} hitSlop={8} style={styles.regenerate}>
