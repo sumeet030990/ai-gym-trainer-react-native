@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, StyleSheet, FlatList, Pressable } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Chip } from 'react-native-paper';
@@ -9,24 +9,42 @@ import SearchBar from '../../../src/components/common/SearchBar';
 import Loader from '../../../src/components/common/Loader';
 import ErrorView from '../../../src/components/common/ErrorView';
 import EmptyState from '../../../src/components/common/EmptyState';
-import AppText from '../../../src/components/common/AppText';
 import ExerciseCard from '../../../src/components/cards/ExerciseCard';
 import ExerciseFiltersSheet from '../../../src/components/dialogs/ExerciseFiltersSheet';
 import EquipmentFiltersSheet from '../../../src/components/dialogs/EquipmentFiltersSheet';
-import { useExerciseLibrary, useExerciseFilters } from '../../../src/hooks/useExerciseLibrary';
+import { useExerciseLibrary, useEquipments, useExerciseFilters, useExerciseFilterOptions } from '../../../src/hooks/useExerciseLibrary';
 import { colors } from '../../../src/theme/colors';
 import { spacing } from '../../../src/theme/spacing';
 import { radius } from '../../../src/theme/radius';
 
 export default function ExerciseLibrary() {
-  const { data: exercises, isLoading, isError, refetch } = useExerciseLibrary();
+  const { data: exercises, isLoading: exercisesLoading, isError: exercisesError, refetch: refetchExercises } = useExerciseLibrary();
+  const { data: equipments, isLoading: equipmentsLoading, isError: equipmentsError, refetch: refetchEquipments } = useEquipments();
   const [query, setQuery] = useState('');
-  const [muscle, setMuscle] = useState(null);
-  const [equipment, setEquipment] = useState(null);
+  const [muscleId, setMuscleId] = useState(null);
+  const [equipmentId, setEquipmentId] = useState(null);
   const [muscleSheetVisible, setMuscleSheetVisible] = useState(false);
   const [equipmentSheetVisible, setEquipmentSheetVisible] = useState(false);
 
-  const filtered = useExerciseFilters(exercises, { query, muscle, equipment });
+  const filterOptions = useExerciseFilterOptions(exercises, equipments);
+  const filtered = useExerciseFilters(exercises, { query, muscleId, equipmentId });
+
+  const equipmentNameById = useMemo(() => {
+    const map = new Map();
+    (equipments ?? []).forEach((item) => map.set(item.id, item.name));
+    return map;
+  }, [equipments]);
+
+  const selectedMuscleName = filterOptions.muscles.find((m) => m.id === muscleId)?.name;
+  const selectedEquipmentName = filterOptions.equipments.find((e) => e.id === equipmentId)?.name;
+
+  const isLoading = exercisesLoading || equipmentsLoading;
+  const isError = exercisesError || equipmentsError;
+
+  const handleRetry = () => {
+    refetchExercises();
+    refetchEquipments();
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -35,20 +53,20 @@ export default function ExerciseLibrary() {
         <SearchBar value={query} onChangeText={setQuery} placeholder="Search exercises" />
         <View style={styles.filterRow}>
           <Chip
-            icon={() => <Ionicons name="body-outline" size={14} color={muscle ? colors.onPrimaryContainer : colors.textSecondary} />}
-            selected={Boolean(muscle)}
+            icon={() => <Ionicons name="body-outline" size={14} color={muscleId ? colors.onPrimaryContainer : colors.textSecondary} />}
+            selected={Boolean(muscleId)}
             onPress={() => setMuscleSheetVisible(true)}
-            style={[styles.chip, muscle && styles.chipSelected]}
+            style={[styles.chip, muscleId && styles.chipSelected]}
           >
-            {muscle ?? 'Muscle'}
+            {selectedMuscleName ?? 'Muscle'}
           </Chip>
           <Chip
-            icon={() => <Ionicons name="barbell-outline" size={14} color={equipment ? colors.onPrimaryContainer : colors.textSecondary} />}
-            selected={Boolean(equipment)}
+            icon={() => <Ionicons name="barbell-outline" size={14} color={equipmentId ? colors.onPrimaryContainer : colors.textSecondary} />}
+            selected={Boolean(equipmentId)}
             onPress={() => setEquipmentSheetVisible(true)}
-            style={[styles.chip, equipment && styles.chipSelected]}
+            style={[styles.chip, equipmentId && styles.chipSelected]}
           >
-            {equipment ?? 'Equipment'}
+            {selectedEquipmentName ?? 'Equipment'}
           </Chip>
         </View>
       </View>
@@ -56,7 +74,7 @@ export default function ExerciseLibrary() {
       {isLoading ? (
         <Loader height={300} />
       ) : isError ? (
-        <ErrorView message="Couldn't load the exercise library." onRetry={refetch} />
+        <ErrorView message="Couldn't load the exercise library." onRetry={handleRetry} />
       ) : (
         <FlatList
           data={filtered}
@@ -72,23 +90,32 @@ export default function ExerciseLibrary() {
             />
           }
           renderItem={({ item }) => (
-            <ExerciseCard exercise={item} onPress={() => router.push(`/Workout/exercise/${item.id}`)} />
+            <ExerciseCard
+              exercise={{
+                ...item,
+                muscle: item.muscle?.name ?? null,
+                equipment: equipmentNameById.get(item.equipment_id) ?? null,
+              }}
+              onPress={() => router.push(`/Workout/exercise/${item.id}`)}
+            />
           )}
         />
       )}
 
       <ExerciseFiltersSheet
         visible={muscleSheetVisible}
-        selectedMuscle={muscle}
-        onApply={setMuscle}
-        onClear={() => setMuscle(null)}
+        options={filterOptions.muscles}
+        selectedMuscleId={muscleId}
+        onApply={setMuscleId}
+        onClear={() => setMuscleId(null)}
         onClose={() => setMuscleSheetVisible(false)}
       />
       <EquipmentFiltersSheet
         visible={equipmentSheetVisible}
-        selectedEquipment={equipment}
-        onApply={setEquipment}
-        onClear={() => setEquipment(null)}
+        options={filterOptions.equipments}
+        selectedEquipmentId={equipmentId}
+        onApply={setEquipmentId}
+        onClear={() => setEquipmentId(null)}
         onClose={() => setEquipmentSheetVisible(false)}
       />
     </SafeAreaView>

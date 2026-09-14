@@ -6,27 +6,32 @@ import PrimaryButton from '../common/PrimaryButton';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { radius } from '../../theme/radius';
-import { EQUIPMENT_TYPES } from '../../utils/constants/exercises';
 
-export default function EquipmentFiltersSheet({ visible, selectedEquipment, onClose, onApply, onClear }) {
+export default function EquipmentFiltersSheet({ visible, options, selectedEquipmentId, onClose, onApply, onClear }) {
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <AppText variant="titleLarge" style={styles.title}>
         Equipment
       </AppText>
-      <View style={styles.chipsRow}>
-        {EQUIPMENT_TYPES.map((equipment) => (
-          <Chip
-            key={equipment}
-            selected={selectedEquipment === equipment}
-            onPress={() => onApply(selectedEquipment === equipment ? null : equipment)}
-            style={[styles.chip, selectedEquipment === equipment && styles.chipSelected]}
-            textStyle={selectedEquipment === equipment ? styles.chipTextSelected : undefined}
-          >
-            {equipment}
-          </Chip>
-        ))}
-      </View>
+      {options?.length ? (
+        <View style={styles.chipsRow}>
+          {options.map((equipment) => (
+            <Chip
+              key={equipment.id}
+              selected={selectedEquipmentId === equipment.id}
+              onPress={() => onApply(selectedEquipmentId === equipment.id ? null : equipment.id)}
+              style={[styles.chip, selectedEquipmentId === equipment.id && styles.chipSelected]}
+              textStyle={selectedEquipmentId === equipment.id ? styles.chipTextSelected : undefined}
+            >
+              {equipment.name}
+            </Chip>
+          ))}
+        </View>
+      ) : (
+        <AppText variant="bodyMedium" color={colors.textSecondary} style={styles.emptyText}>
+          No equipment available yet.
+        </AppText>
+      )}
 
       <View style={styles.actions}>
         <PrimaryButton onPress={onClear} buttonColor={colors.surfaceVariant} textColor={colors.textPrimary} style={styles.actionButton}>
@@ -59,6 +64,9 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     color: colors.onPrimaryContainer,
+  },
+  emptyText: {
+    marginBottom: spacing.lg,
   },
   actions: {
     flexDirection: 'row',

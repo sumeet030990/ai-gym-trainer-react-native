@@ -7,6 +7,7 @@ import { spacing } from '../../theme/spacing';
 import { radius } from '../../theme/radius';
 
 export default function ExerciseCard({ exercise, status, onPress, style }) {
+  const hasStats = exercise.sets != null || exercise.reps != null || exercise.calories != null;
   const weightLabel = exercise.suggestedWeight ? `${exercise.suggestedWeight} ${exercise.weightUnit}` : 'Bodyweight';
 
   return (
@@ -39,16 +40,18 @@ export default function ExerciseCard({ exercise, status, onPress, style }) {
           </View>
 
           <View style={styles.tagsRow}>
-            <Tag icon="barbell-outline" label={exercise.equipment} />
-            <Tag icon="body-outline" label={exercise.muscle} />
+            {exercise.equipment ? <Tag icon="barbell-outline" label={exercise.equipment} /> : null}
+            {exercise.muscle ? <Tag icon="body-outline" label={exercise.muscle} /> : null}
           </View>
 
-          <View style={styles.statsRow}>
-            <MiniStat label="Sets" value={exercise.sets} />
-            <MiniStat label="Reps" value={exercise.reps} />
-            <MiniStat label="Weight" value={weightLabel} />
-            <MiniStat label="Kcal" value={exercise.calories} />
-          </View>
+          {hasStats ? (
+            <View style={styles.statsRow}>
+              <MiniStat label="Sets" value={exercise.sets} />
+              <MiniStat label="Reps" value={exercise.reps} />
+              <MiniStat label="Weight" value={weightLabel} />
+              <MiniStat label="Kcal" value={exercise.calories} />
+            </View>
+          ) : null}
         </View>
 
         {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} /> : null}
