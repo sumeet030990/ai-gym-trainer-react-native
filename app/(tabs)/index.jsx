@@ -23,6 +23,7 @@ import { radius } from '../../src/theme/radius';
 const QUICK_LINKS = [
   { key: 'library', label: 'Exercise Library', icon: 'library-outline', color: colors.primary, background: colors.primaryContainer, href: '/Workout/library' },
   { key: 'history', label: 'History', icon: 'time-outline', color: colors.secondary, background: colors.secondaryContainer, href: '/Workout/history' },
+  { key: 'attendance', label: 'Attendance', icon: 'checkmark-done-outline', color: colors.tertiary, background: colors.tertiaryContainer, href: '/Workout/attendance' },
 ];
 
 function getGreeting() {

@@ -29,13 +29,9 @@ export function useAttendanceStreak(userId) {
   });
 
   if (!query.data) return { ...query, data: undefined };
-  console.log('query.data: ', query.data);
 
   const days = new Set(query.data.map((record) => record.attendance_date.slice(0, 10)));
-  console.log('days: ', days);
   const hasCheckedInToday = days.has(new Date().toISOString().slice(0, 10));
-  console.log('new Date().toISOString().slice(0, 10): ', new Date().toISOString().slice(0, 10));
-  console.log('hasCheckedInToday: ', hasCheckedInToday);
 
   return { ...query, data: { streak: computeStreak(days), hasCheckedInToday } };
 }

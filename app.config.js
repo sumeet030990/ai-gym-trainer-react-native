@@ -26,7 +26,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-router', 'expo-status-bar'],
+    plugins: ['expo-router', 'expo-status-bar', '@react-native-community/datetimepicker'],
     extra: {
       backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL,
     },
