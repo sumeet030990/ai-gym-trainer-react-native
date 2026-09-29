@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SECURE_KEYS, getSecureValue, setSecureValue, deleteSecureValue } from '../services/storage/secureStorage';
+import { queryClient } from '../services/api/queryClient';
 
 // The JWT never lands in Zustand/MMKV — only `isAuthenticated` does. The real
 // token lives in SecureStore and is read on demand for authenticated requests.
@@ -26,6 +27,8 @@ export const useAuthStore = create((set) => ({
 
   logout: async () => {
     await deleteSecureValue(SECURE_KEYS.authToken);
+    // Drop cached server data so the next user never sees the previous user's queries.
+    queryClient.clear();
     set({ ...AUTH_DEFAULTS, isHydrating: false });
   },
 }));
