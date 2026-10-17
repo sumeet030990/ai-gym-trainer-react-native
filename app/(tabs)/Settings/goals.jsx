@@ -1,100 +1,122 @@
-import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SegmentedButtons } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useFormik } from 'formik';
 import ScreenHeader from '../../../src/components/common/ScreenHeader';
-import AppInput from '../../../src/components/common/AppInput';
-import AppText from '../../../src/components/common/AppText';
-import PrimaryButton from '../../../src/components/common/PrimaryButton';
-import { useGoalsStore } from '../../../src/store/goalsStore';
-import { goalsSchema, GOAL_TYPES } from '../../../src/utils/schemas/settingsSchemas';
-import { validateWithZod } from '../../../src/utils/validateWithZod';
+import Loader from '../../../src/components/common/Loader';
+import ErrorView from '../../../src/components/common/ErrorView';
+import EmptyState from '../../../src/components/common/EmptyState';
+import GoalsWizard from '../../../src/components/forms/goals/GoalsWizard';
+import GoalsList from '../../../src/components/forms/goals/GoalsList';
+import {
+  useGoalQuestions,
+  useUserGoals,
+  useSaveGoalsMutation,
+  useDeleteGoalsMutation,
+} from '../../../src/hooks/useGoals';
+import { flattenQuestions, buildInitialValues, buildPayload } from '../../../src/utils/goalAnswers';
 import { colors } from '../../../src/theme/colors';
 import { spacing } from '../../../src/theme/spacing';
-import { radius } from '../../../src/theme/radius';
+
+const VIEW_MODES = [
+  { value: 'wizard', label: 'Step by step', icon: 'format-list-numbered' },
+  { value: 'list', label: 'All questions', icon: 'format-list-bulleted' },
+];
 
 export default function GoalsSettings() {
-  const goals = useGoalsStore();
+  const questionsQuery = useGoalQuestions();
+  const userGoalsQuery = useUserGoals();
 
-  const { values, errors, isSubmitting, setFieldValue, handleSubmit } = useFormik({
-    initialValues: {
-      goalType: goals.goalType,
-      targetWeightKg: goals.targetWeightKg ? String(goals.targetWeightKg) : '',
-      weeklyWorkoutTarget: String(goals.weeklyWorkoutTarget),
-      dailyCalorieTarget: String(goals.dailyCalorieTarget),
-      proteinTargetG: goals.proteinTargetG ? String(goals.proteinTargetG) : '',
-    },
-    validate: validateWithZod(goalsSchema),
-    onSubmit: (formValues, { setSubmitting }) => {
-      goals.updateGoals(formValues);
-      setSubmitting(false);
-      router.back();
-    },
-  });
+  const isLoading = questionsQuery.isPending || userGoalsQuery.isPending;
+  const error = questionsQuery.error ?? userGoalsQuery.error;
+  const retry = () => {
+    if (questionsQuery.isError) questionsQuery.refetch();
+    if (userGoalsQuery.isError) userGoalsQuery.refetch();
+  };
+
+  let body;
+  if (isLoading) body = <Loader />;
+  else if (error) body = <ErrorView message={error.message} onRetry={retry} />;
+  else if (!questionsQuery.data.length) body = <EmptyState title="No goal questions yet" />;
+  else body = <GoalsForm categories={questionsQuery.data} userGoals={userGoalsQuery.data} />;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <ScreenHeader eyebrow="Account" title="Goals" rightIcon="close" onRightPress={() => router.back()} />
       </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Field label="Goal">
-          <View style={styles.grid}>
-            {GOAL_TYPES.map((option) => {
-              const selected = values.goalType === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => setFieldValue('goalType', option.value)}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                >
-                  <AppText variant="labelLarge" color={selected ? colors.onPrimary : colors.textPrimary}>
-                    {option.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Field>
-
-        <Field label="Target Weight (kg)" error={errors.targetWeightKg}>
-          <AppInput placeholder="Optional" keyboardType="numeric" value={values.targetWeightKg} onChangeText={(text) => setFieldValue('targetWeightKg', text)} />
-        </Field>
-
-        <View style={styles.row}>
-          <Field label="Workouts / Week" error={errors.weeklyWorkoutTarget} style={styles.half}>
-            <AppInput placeholder="4" keyboardType="numeric" value={values.weeklyWorkoutTarget} onChangeText={(text) => setFieldValue('weeklyWorkoutTarget', text)} />
-          </Field>
-          <Field label="Daily Calories" error={errors.dailyCalorieTarget} style={styles.half}>
-            <AppInput placeholder="2200" keyboardType="numeric" value={values.dailyCalorieTarget} onChangeText={(text) => setFieldValue('dailyCalorieTarget', text)} />
-          </Field>
-        </View>
-
-        <Field label="Daily Protein (g)" error={errors.proteinTargetG}>
-          <AppInput placeholder="Optional" keyboardType="numeric" value={values.proteinTargetG} onChangeText={(text) => setFieldValue('proteinTargetG', text)} />
-        </Field>
-
-        <PrimaryButton onPress={handleSubmit} disabled={isSubmitting} style={styles.submit}>
-          Save Goals
-        </PrimaryButton>
-      </ScrollView>
+      {body}
     </SafeAreaView>
   );
 }
 
-function Field({ label, error, children, style }) {
+// Mounted only once both queries have data, so Formik's initialValues are built from the server state.
+// Both views share one Formik instance, so switching views keeps unsaved answers.
+function GoalsForm({ categories, userGoals }) {
+  const [viewMode, setViewMode] = useState('wizard');
+  const [step, setStep] = useState(0);
+  const questions = useMemo(() => flattenQuestions(categories), [categories]);
+
+  const saveGoals = useSaveGoalsMutation();
+  const deleteGoals = useDeleteGoalsMutation();
+  const errorMessage = (saveGoals.error ?? deleteGoals.error)?.message;
+
+  const { values, isSubmitting, setFieldValue, handleSubmit } = useFormik({
+    initialValues: buildInitialValues(questions, userGoals),
+    onSubmit: async (formValues) => {
+      const payload = buildPayload(questions, formValues, userGoals);
+      try {
+        // POST with nothing to insert would be an empty bulk insert; clearing is the same intent.
+        if (payload.length) await saveGoals.mutateAsync(payload);
+        else await deleteGoals.mutateAsync();
+        router.back();
+      } catch {
+        // Surfaced via errorMessage.
+      }
+    },
+  });
+
+  const confirmClear = () => {
+    Alert.alert('Clear goals?', 'This removes all of your goal answers.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: () => deleteGoals.mutate(undefined, { onSuccess: () => router.back() }),
+      },
+    ]);
+  };
+
+  const isBusy = isSubmitting || deleteGoals.isPending;
+
   return (
-    <View style={[styles.field, style]}>
-      <AppText variant="labelLarge" color={colors.textSecondary} style={styles.fieldLabel}>
-        {label}
-      </AppText>
-      {children}
-      {error ? (
-        <AppText variant="bodySmall" color={colors.error} style={styles.fieldError}>
-          {error}
-        </AppText>
-      ) : null}
+    <View style={styles.form}>
+      <SegmentedButtons value={viewMode} onValueChange={setViewMode} buttons={VIEW_MODES} style={styles.toggle} />
+
+      {viewMode === 'wizard' ? (
+        <GoalsWizard
+          questions={questions}
+          values={values}
+          onChange={setFieldValue}
+          step={step}
+          onStepChange={setStep}
+          onSave={handleSubmit}
+          isBusy={isBusy}
+          errorMessage={errorMessage}
+        />
+      ) : (
+        <GoalsList
+          categories={categories}
+          values={values}
+          onChange={setFieldValue}
+          onSave={handleSubmit}
+          onClear={userGoals.length ? confirmClear : undefined}
+          isBusy={isBusy}
+          errorMessage={errorMessage}
+        />
+      )}
     </View>
   );
 }
@@ -109,45 +131,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
     marginBottom: spacing.sm,
   },
-  content: {
-    padding: spacing.lg,
-    paddingTop: 0,
-    paddingBottom: spacing.xxxl,
-  },
-  field: {
-    marginBottom: spacing.md,
-  },
-  fieldLabel: {
-    marginBottom: spacing.xxs,
-  },
-  fieldError: {
-    marginTop: spacing.xxs,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  half: {
+  form: {
     flex: 1,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  chip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceVariant,
-    borderWidth: 1,
-    borderColor: colors.outline,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  submit: {
-    marginTop: spacing.sm,
+  toggle: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
 });

@@ -26,21 +26,6 @@ export const profileSchema = z.object({
   fitnessLevel: z.enum(['beginner', 'intermediate', 'advanced']),
 });
 
-export const GOAL_TYPES = [
-  { value: 'lose_weight', label: 'Lose Weight' },
-  { value: 'build_muscle', label: 'Build Muscle' },
-  { value: 'maintain', label: 'Maintain' },
-  { value: 'improve_endurance', label: 'Improve Endurance' },
-];
-
-export const goalsSchema = z.object({
-  goalType: z.enum(['lose_weight', 'build_muscle', 'maintain', 'improve_endurance']),
-  targetWeightKg: optionalNumber(30, 300),
-  weeklyWorkoutTarget: z.coerce.number({ invalid_type_error: 'Enter a number' }).int().min(1).max(14),
-  dailyCalorieTarget: z.coerce.number({ invalid_type_error: 'Enter a number' }).int().min(1000).max(6000),
-  proteinTargetG: optionalNumber(0, 500),
-});
-
 export const AI_PROVIDERS = [
   { value: 'groq', label: 'Groq' },
   { value: 'openai', label: 'OpenAI' },

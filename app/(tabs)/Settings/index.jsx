@@ -10,16 +10,16 @@ import Avatar from '../../../src/components/common/Avatar';
 import AppText from '../../../src/components/common/AppText';
 import AppCard from '../../../src/components/cards/AppCard';
 import { useProfileStore } from '../../../src/store/profileStore';
-import { useGoalsStore } from '../../../src/store/goalsStore';
+import { usePrimaryGoalSummary } from '../../../src/hooks/useGoals';
 import { useAIConfigStore } from '../../../src/store/aiConfigStore';
 import { useAuthStore } from '../../../src/store/authStore';
-import { GOAL_TYPES, AI_PROVIDERS } from '../../../src/utils/schemas/settingsSchemas';
+import { AI_PROVIDERS } from '../../../src/utils/schemas/settingsSchemas';
 import { colors } from '../../../src/theme/colors';
 import { spacing } from '../../../src/theme/spacing';
 
 export default function SettingsHome() {
   const { name, email, avatarUri } = useProfileStore();
-  const goalType = useGoalsStore((state) => state.goalType);
+  const goalSummary = usePrimaryGoalSummary();
   const { provider, hasApiKey, hydrateApiKeyStatus } = useAIConfigStore();
   const logout = useAuthStore((state) => state.logout);
 
@@ -27,7 +27,7 @@ export default function SettingsHome() {
     hydrateApiKeyStatus();
   }, [hydrateApiKeyStatus]);
 
-  const goalLabel = GOAL_TYPES.find((g) => g.value === goalType)?.label ?? 'Not set';
+  const goalLabel = goalSummary ?? 'Not set';
   const providerLabel = AI_PROVIDERS.find((p) => p.value === provider)?.label ?? provider;
 
   const handleLogout = async () => {
