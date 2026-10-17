@@ -31,9 +31,13 @@ export function useAttendanceStreak(userId) {
   if (!query.data) return { ...query, data: undefined };
 
   const days = new Set(query.data.map((record) => record.attendance_date.slice(0, 10)));
-  const hasCheckedInToday = days.has(new Date().toISOString().slice(0, 10));
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayRecord = query.data.find((record) => record.attendance_date.slice(0, 10) === todayKey);
 
-  return { ...query, data: { streak: computeStreak(days), hasCheckedInToday } };
+  return {
+    ...query,
+    data: { streak: computeStreak(days), hasCheckedInToday: Boolean(todayRecord), todayAttendanceId: todayRecord?.id ?? null },
+  };
 }
 
 // Logs a gym check-in and refreshes any attendance history/streak queries so they pick it up.

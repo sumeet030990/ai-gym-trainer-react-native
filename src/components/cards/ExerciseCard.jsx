@@ -49,7 +49,7 @@ export default function ExerciseCard({ exercise, status, onPress, style }) {
               <MiniStat label="Sets" value={exercise.sets} />
               <MiniStat label="Reps" value={exercise.reps} />
               <MiniStat label="Weight" value={weightLabel} />
-              <MiniStat label="Kcal" value={exercise.calories} />
+              {exercise.calories != null ? <MiniStat label="Kcal" value={exercise.calories} /> : null}
             </View>
           ) : null}
         </View>

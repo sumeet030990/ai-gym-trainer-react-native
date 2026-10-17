@@ -42,7 +42,8 @@ export default function SetRow({
   const confirm = () => {
     const payload = {
       weight: weight.trim() === '' ? null : Number(weight) || 0,
-      reps: Number(reps) || 0,
+      // The API takes whole reps; some Android number pads still allow a decimal point.
+      reps: Math.round(Number(reps)) || 0,
     };
     if (editing) {
       onUpdateSet?.(index, payload);

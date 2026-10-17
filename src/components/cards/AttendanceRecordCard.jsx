@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AppCard from './AppCard';
 import AppText from '../common/AppText';
@@ -6,7 +6,7 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { radius } from '../../theme/radius';
 
-export default function AttendanceRecordCard({ record, style }) {
+export default function AttendanceRecordCard({ record, onPress, style }) {
   const date = new Date(record.attendance_date);
   const day = date.toLocaleDateString(undefined, { day: '2-digit' });
   const month = date.toLocaleDateString(undefined, { month: 'short' });
@@ -14,45 +14,42 @@ export default function AttendanceRecordCard({ record, style }) {
   const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   const musclesTrained = record.muscles_trained ?? [];
 
+  // The muscles trained double as the session's title; a check-in with nothing logged falls back to the weekday.
+  const title = musclesTrained.length > 0 ? musclesTrained.join(' · ') : weekday;
+
   return (
-    <AppCard style={[styles.card, style]}>
-      <View style={styles.dateBlock}>
-        <AppText variant="titleLarge" color={colors.primary}>
-          {day}
-        </AppText>
-        <AppText variant="labelSmall" color={colors.textSecondary}>
-          {month.toUpperCase()}
-        </AppText>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.content}>
-        <AppText variant="titleMedium">{weekday}</AppText>
-        <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+    <Pressable onPress={onPress} disabled={!onPress}>
+      <AppCard style={[styles.card, style]}>
+        <View style={styles.dateBlock}>
+          <AppText variant="titleLarge" color={colors.primary}>
+            {day}
+          </AppText>
           <AppText variant="labelSmall" color={colors.textSecondary}>
-            Checked in at {time}
+            {month.toUpperCase()}
           </AppText>
         </View>
 
-        {musclesTrained.length > 0 ? (
-          <View style={styles.musclesRow}>
-            {musclesTrained.map((muscle) => (
-              <View key={muscle} style={styles.muscleTag}>
-                <AppText variant="labelSmall" color={colors.textSecondary}>
-                  {muscle}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </View>
+        <View style={styles.divider} />
 
-      <View style={styles.badge}>
-        <Ionicons name="checkmark" size={14} color={colors.success} />
-      </View>
-    </AppCard>
+        <View style={styles.content}>
+          <AppText variant="titleMedium">{title}</AppText>
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+            <AppText variant="labelSmall" color={colors.textSecondary}>
+              {musclesTrained.length > 0 ? `${weekday} · ` : ''}Checked in at {time}
+            </AppText>
+          </View>
+        </View>
+
+        {onPress ? (
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        ) : (
+          <View style={styles.badge}>
+            <Ionicons name="checkmark" size={14} color={colors.success} />
+          </View>
+        )}
+      </AppCard>
+    </Pressable>
   );
 }
 
@@ -79,18 +76,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-  },
-  musclesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xxs,
-    marginTop: 2,
-  },
-  muscleTag: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceVariant,
   },
   badge: {
     width: 28,

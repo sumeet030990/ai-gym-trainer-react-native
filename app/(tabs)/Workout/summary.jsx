@@ -6,34 +6,95 @@ import { Snackbar } from 'react-native-paper';
 import ScreenHeader from '../../../src/components/common/ScreenHeader';
 import AppText from '../../../src/components/common/AppText';
 import PrimaryButton from '../../../src/components/common/PrimaryButton';
+import Loader from '../../../src/components/common/Loader';
+import ErrorView from '../../../src/components/common/ErrorView';
 import ExerciseCard from '../../../src/components/cards/ExerciseCard';
+import RestDayCard from '../../../src/components/cards/RestDayCard';
 import StatCard from '../../../src/components/cards/StatCard';
-import { useTodayWorkout } from '../../../src/hooks/useWorkout';
+import {
+  useTodayWorkout,
+  useHasLoggedWorkoutToday,
+  useLogWorkoutMutation,
+  useWorkoutSessionSync,
+  buildWorkoutLogPayload,
+} from '../../../src/hooks/useWorkout';
 import { useUserProfile } from '../../../src/hooks/useUserProfile';
 import { useAttendanceStreak, useLogAttendanceMutation } from '../../../src/hooks/useAttendanceStreak';
 import { useWorkoutSessionStore } from '../../../src/store/workoutSessionStore';
-import { TODAY_WORKOUT_EXERCISE_IDS, getExerciseById } from '../../../src/utils/constants/exercises';
 import { colors } from '../../../src/theme/colors';
 import { spacing } from '../../../src/theme/spacing';
 
 export default function WorkoutSummary() {
-  const { data: workout } = useTodayWorkout();
+  const { data: workout, isLoading, isError, refetch } = useTodayWorkout();
   const { data: profile } = useUserProfile();
-  const { data: attendance } = useAttendanceStreak(profile?.user?.id);
+  const { data: attendance, isLoading: attendanceLoading } = useAttendanceStreak(profile?.user?.id);
+  const { data: hasLoggedToday, isLoading: loggedTodayLoading } = useHasLoggedWorkoutToday();
+  const sessionSync = useWorkoutSessionSync(attendance?.todayAttendanceId, Boolean(attendance));
   const completedSets = useWorkoutSessionStore((state) => state.completedSets);
-  const exercises = TODAY_WORKOUT_EXERCISE_IDS.map(getExerciseById).filter(Boolean);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const logAttendance = useLogAttendanceMutation();
-  const alreadyCheckedInToday = Boolean(attendance?.hasCheckedInToday);
+  const logWorkout = useLogWorkoutMutation();
 
-  const handleStartWorkout = () => {
-    logAttendance.mutate(undefined, {
-      onSuccess: () => {
-        if (exercises[0]) router.push(`/Workout/exercise/${exercises[0].id}`);
-      },
-      onError: (error) => setErrorMessage(error.message ?? 'Could not log attendance. Please try again.'),
-    });
+  const exercises = workout?.exercises ?? [];
+  const isComplete = (exercise) => (completedSets[exercise.id]?.length ?? 0) >= exercise.sets;
+  const nextExercise = exercises.find((exercise) => !isComplete(exercise));
+  const isStarting = logAttendance.isPending || logWorkout.isPending;
+  const showFooter = Boolean(workout) && !workout.isRestDay && exercises.length > 0;
+
+  // Checks in (unless already checked in today) and opens today's workout log,
+  // carrying over any sets logged before starting; each set after that is saved
+  // from the Exercise Details screen.
+  const handleStartWorkout = async () => {
+    try {
+      let attendanceId = attendance?.todayAttendanceId;
+      if (!attendanceId) {
+        const record = await logAttendance.mutateAsync();
+        attendanceId = record.id;
+      }
+      await logWorkout.mutateAsync(buildWorkoutLogPayload(exercises, completedSets, attendanceId));
+      router.push(`/Workout/exercise/${(nextExercise ?? exercises[0]).id}`);
+    } catch (error) {
+      setSnackbarMessage(error.message ?? 'Could not start your workout. Please try again.');
+    }
+  };
+
+  const renderFooterAction = () => {
+    if (!hasLoggedToday) {
+      return (
+        <PrimaryButton
+          icon="play"
+          onPress={handleStartWorkout}
+          loading={isStarting}
+          disabled={isStarting || attendanceLoading || loggedTodayLoading || sessionSync.isSyncing}
+        >
+          Start Workout
+        </PrimaryButton>
+      );
+    }
+
+    if (!nextExercise) {
+      return (
+        <>
+          <AppText variant="bodySmall" style={styles.footerNote}>
+            Every set is logged. Great job!
+          </AppText>
+          <PrimaryButton icon="check" disabled>
+            Workout Complete
+          </PrimaryButton>
+        </>
+      );
+    }
+
+    return (
+      <PrimaryButton
+        icon="play"
+        onPress={() => router.push(`/Workout/exercise/${nextExercise.id}`)}
+        disabled={sessionSync.isSyncing}
+      >
+        Continue Workout
+      </PrimaryButton>
+    );
   };
 
   return (
@@ -43,49 +104,47 @@ export default function WorkoutSummary() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.statsRow}>
-          <StatCard icon="barbell-outline" iconColor={colors.primary} iconBackground={colors.primaryContainer} value={exercises.length} label="Exercises" />
-          <StatCard icon="flame-outline" iconColor={colors.tertiary} iconBackground={colors.tertiaryContainer} value={`${workout?.calories ?? 0}`} label="Est. Calories" />
-          <StatCard icon="time-outline" iconColor={colors.secondary} iconBackground={colors.secondaryContainer} value={workout?.duration ?? '—'} label="Duration" />
-        </View>
+        {isLoading || sessionSync.isSyncing ? (
+          <Loader height={260} />
+        ) : isError || !workout ? (
+          <ErrorView message="Couldn't load today's workout." onRetry={refetch} />
+        ) : sessionSync.isError ? (
+          <ErrorView message="Couldn't load the sets you've already logged." onRetry={sessionSync.refetch} />
+        ) : workout.isRestDay ? (
+          <RestDayCard />
+        ) : (
+          <>
+            <View style={styles.statsRow}>
+              <StatCard icon="barbell-outline" iconColor={colors.primary} iconBackground={colors.primaryContainer} value={exercises.length} label="Exercises" />
+              <StatCard icon="flame-outline" iconColor={colors.tertiary} iconBackground={colors.tertiaryContainer} value={workout.calories ?? '—'} label="Est. Calories" />
+              <StatCard icon="time-outline" iconColor={colors.secondary} iconBackground={colors.secondaryContainer} value={workout.duration ?? '—'} label="Duration" />
+            </View>
 
-        <AppText variant="titleLarge" style={styles.sectionTitle}>
-          Exercises
-        </AppText>
-        <View style={styles.list}>
-          {exercises.map((exercise) => {
-            const doneSets = completedSets[exercise.id]?.length ?? 0;
-            const status = doneSets >= exercise.sets ? 'complete' : 'pending';
-            return (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                status={status}
-                onPress={() => router.push(`/Workout/exercise/${exercise.id}`)}
-              />
-            );
-          })}
-        </View>
+            <AppText variant="titleLarge" style={styles.sectionTitle}>
+              Exercises
+            </AppText>
+            <View style={styles.list}>
+              {exercises.map((exercise) => {
+                const doneSets = completedSets[exercise.id]?.length ?? 0;
+                const status = doneSets >= exercise.sets ? 'complete' : 'pending';
+                return (
+                  <ExerciseCard
+                    key={exercise.id}
+                    exercise={exercise}
+                    status={status}
+                    onPress={() => router.push(`/Workout/exercise/${exercise.id}`)}
+                  />
+                );
+              })}
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        {alreadyCheckedInToday && (
-          <AppText variant="bodySmall" style={styles.checkedInNote}>
-            You've already checked in today
-          </AppText>
-        )}
-        <PrimaryButton
-          icon="play"
-          onPress={handleStartWorkout}
-          loading={logAttendance.isPending}
-          disabled={logAttendance.isPending || alreadyCheckedInToday}
-        >
-          Start Workout
-        </PrimaryButton>
-      </View>
+      {showFooter && <View style={styles.footer}>{renderFooterAction()}</View>}
 
-      <Snackbar visible={Boolean(errorMessage)} onDismiss={() => setErrorMessage('')} duration={4000}>
-        {errorMessage}
+      <Snackbar visible={Boolean(snackbarMessage)} onDismiss={() => setSnackbarMessage('')} duration={4000}>
+        {snackbarMessage}
       </Snackbar>
     </SafeAreaView>
   );
@@ -118,7 +177,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacing.lg,
   },
-  checkedInNote: {
+  footerNote: {
     textAlign: 'center',
     color: colors.onSurfaceVariant,
     marginBottom: spacing.sm,
