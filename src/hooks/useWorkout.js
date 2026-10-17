@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getUserPlan,
   checkRegenerationRequired,
+  generatePlan,
   regeneratePlan,
   logWorkout,
   getWorkoutLogs,
@@ -170,6 +171,24 @@ export function useRegenerationStatus() {
       const result = await checkRegenerationRequired();
       if (!result.ok) throw new Error(result.message);
       return result.data;
+    },
+  });
+}
+
+// Also refreshes /users/me: its current_plan_id is what the root navigator gates onboarding on.
+export function useGeneratePlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const result = await generatePlan();
+      if (!result.ok) throw new Error(result.message);
+      return result.data;
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ['workout-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['regeneration'] });
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
     },
   });
 }

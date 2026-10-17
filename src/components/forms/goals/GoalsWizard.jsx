@@ -9,7 +9,7 @@ import { spacing } from '../../../theme/spacing';
 import { radius } from '../../../theme/radius';
 
 // One question per step, with a progress bar on top and Previous/Next (Save on the last step) at the bottom.
-export default function GoalsWizard({ questions, values, onChange, step, onStepChange, onSave, isBusy, errorMessage }) {
+export default function GoalsWizard({ questions, values, onChange, step, onStepChange, onSave, saveLabel = 'Save', isBusy, errorMessage }) {
   const question = questions[step];
   const isFirst = step === 0;
   const isLast = step === questions.length - 1;
@@ -61,7 +61,7 @@ export default function GoalsWizard({ questions, values, onChange, step, onStepC
           </SecondaryButton>
           {isLast ? (
             <PrimaryButton onPress={onSave} disabled={isBusy} loading={isBusy} style={styles.button}>
-              Save
+              {saveLabel}
             </PrimaryButton>
           ) : (
             <PrimaryButton onPress={() => onStepChange(step + 1)} disabled={isBusy} style={styles.button}>

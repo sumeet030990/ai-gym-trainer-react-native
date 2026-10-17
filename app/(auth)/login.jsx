@@ -28,8 +28,9 @@ export default function LoginScreen() {
     onSubmit: async ({ email, password }, { setSubmitting }) => {
       setServerError(null);
       try {
+        // No navigation here: the root navigator's guards swap (auth) for
+        // (tabs) or (onboarding) once the session and /users/me are in.
         await loginMutation.mutateAsync({ email, password });
-        router.replace('/');
       } catch (error) {
         setServerError(error.message);
       } finally {

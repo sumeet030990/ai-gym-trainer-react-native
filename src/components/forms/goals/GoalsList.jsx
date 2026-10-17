@@ -7,7 +7,7 @@ import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 
 // Every question on one scrollable page, grouped under its category.
-export default function GoalsList({ categories, values, onChange, onSave, onClear, isBusy, errorMessage }) {
+export default function GoalsList({ categories, values, onChange, onSave, saveLabel = 'Save Goals', onClear, isBusy, errorMessage }) {
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {categories.map(({ category, questions }) => (
@@ -35,7 +35,7 @@ export default function GoalsList({ categories, values, onChange, onSave, onClea
       ) : null}
 
       <PrimaryButton onPress={onSave} disabled={isBusy} loading={isBusy} style={styles.submit}>
-        Save Goals
+        {saveLabel}
       </PrimaryButton>
 
       {onClear ? (

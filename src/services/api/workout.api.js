@@ -8,6 +8,11 @@ export function checkRegenerationRequired() {
   return authorizedFetch('/workout/check-regeneration-required');
 }
 
+// Builds the user's first plan from their goal answers and sets users.current_plan_id.
+export function generatePlan() {
+  return authorizedFetch('/workout/ai/generate-plan', { method: 'POST' });
+}
+
 export function regeneratePlan() {
   return authorizedFetch('/workout/ai/regenerate-plan', { method: 'POST' });
 }
