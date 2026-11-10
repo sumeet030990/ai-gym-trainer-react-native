@@ -1,3 +1,6 @@
+@claude-docs/PROJECT_CONTEXT.md
+@SYSTEM_CONTEXT.md
+
 # PocketCoach - React Native Project Context
 
 You are helping build a production-ready React Native application called **PocketCoach**.
